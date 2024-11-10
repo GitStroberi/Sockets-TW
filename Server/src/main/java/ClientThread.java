@@ -69,8 +69,14 @@ public class ClientThread extends Thread {
             case MESSAGE_ALL -> {
                 UserManagement.INSTANCE.broadcastMessage(receivedPacket);
             }
+            case MESSAGE_ROOM -> {
+                UserManagement.INSTANCE.sendRoomMessage(receivedPacket);
+            }
             case MESSAGE_INDIVIDUAL -> {
-                // Handle individual messaging (not implemented)
+                UserManagement.INSTANCE.sendPrivateMessage(receivedPacket);
+            }
+            case JOIN_ROOM -> {
+                UserManagement.INSTANCE.joinRoom(receivedPacket);
             }
             default -> {
                 responsePacket = Packet.builder().message("Invalid command").build();

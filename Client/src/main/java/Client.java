@@ -40,9 +40,15 @@ public class Client {
                             System.out.println("Logged in as: " + currentUser.getNickname());
                         }
 
-                        if(packet.getCommand().equals(Command.MESSAGE_ALL)){
+                        if(packet.getCommand().equals(Command.MESSAGE_ALL)) {
                             String message = "%s : %s ".formatted(packet.getUser().getNickname(), packet.getMessage());
                             System.out.println(message);
+                        } else if (packet.getCommand().equals(Command.MESSAGE_INDIVIDUAL)) {
+                            System.out.println(packet.getUser().getNickname() + " (Private): " + packet.getMessage());
+                        } else if (packet.getCommand().equals(Command.MESSAGE_ROOM)) {
+                            System.out.println(packet.getUser().getNickname() + " (Room " + packet.getRoom() + "): " + packet.getMessage());
+                        } else if (packet.getCommand().equals(Command.JOIN_ROOM)) {
+                            System.out.println(packet.getUser().getNickname() + " joined room: " + packet.getRoom());
                         }
                         this.notify(); // Notify the waiting thread that a server response was received
                     }
@@ -85,6 +91,8 @@ public class Client {
                 switch (option) {
                     case "1", "message all" -> messageAll(scanner);
                     case "2", "message individual" -> messageIndividual(scanner);
+                    case "3", "join room" -> joinRoom(scanner);
+                    case "4", "message room" -> messageRoom(scanner);
                     case "exit" -> exit();
                     default -> System.out.println("Invalid option. Please try again.");
                 }
@@ -108,6 +116,8 @@ public class Client {
                 Messaging Options:
                 1. Message All (Public Chat)
                 2. Message Individual
+                3. Join Chat Room
+                4. Message Room
                 Type 'exit' to quit.
                 Choose: """);
     }
@@ -178,8 +188,45 @@ public class Client {
                     .builder()
                     .message(message)
                     .user(currentUser)  // Use the retained User (principal)
+                    .recipient(recipient)
                     .command(Command.MESSAGE_INDIVIDUAL)
                     .build());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void messageRoom(Scanner scanner) {
+        System.out.print("Enter room name: ");
+        String roomName = scanner.nextLine();
+        System.out.print("Enter message: ");
+        String message = scanner.nextLine();
+
+        try {
+            out.writeObject(Packet
+                    .builder()
+                    .message(message)
+                    .user(currentUser)  // Use the retained User (principal)
+                    .room(roomName)
+                    .command(Command.MESSAGE_ROOM)
+                    .build());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void joinRoom(Scanner scanner) {
+        System.out.print("Enter room name to join or create: ");
+        String roomName = scanner.nextLine();
+
+        try {
+            out.writeObject(Packet
+                    .builder()
+                    .user(currentUser)
+                    .room(roomName)
+                    .command(Command.JOIN_ROOM)
+                    .build());
+            System.out.println("Joined room: " + roomName);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

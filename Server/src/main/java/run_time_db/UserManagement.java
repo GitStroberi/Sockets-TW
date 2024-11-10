@@ -6,21 +6,65 @@ import packet.User;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public enum UserManagement {
     INSTANCE;
 
     public List<User> users;
+    public Map<String, List<User>> chatRooms = new HashMap<>(); // Chat rooms
 
     UserManagement() {
         this.users = List.of(
                 User.builder().nickname("Mock 1").password("1234").build(),
                 User.builder().nickname("Mock 2").password("1234").build(),
-                User.builder().nickname("Mock 3").password("1234").build()
+                User.builder().nickname("Mock 3").password("1234").build(),
+                User.builder().nickname("Mock 4").password("1234").build()
         );
+
+        chatRooms.put("asd", new ArrayList<>());
+        chatRooms.put("General", new ArrayList<>());
+        chatRooms.put("Random", new ArrayList<>());
+    }
+
+    public void addUserToRoom(String roomName, User user) {
+        chatRooms.get(roomName).add(user);
+    }
+
+    public void sendRoomMessage(Packet packet) {
+        String roomName = packet.getRoom();
+        if (!chatRooms.get(roomName).contains(packet.getUser())) {
+            return;
+        }
+        users.stream()
+                .filter(user -> chatRooms.get(roomName).contains(user) &&
+                        !user.getNickname().equals(packet.getUser().getNickname()))
+                .forEach(user -> sendMessageToUser(user, packet));
+    }
+
+    public void sendPrivateMessage(Packet packet) {
+        String recipientNickname = packet.getRecipient();
+        users.stream()
+                .filter(user -> user.getNickname().equals(recipientNickname))
+                .findFirst()
+                .ifPresent(user -> sendMessageToUser(user, packet));
+    }
+
+    public void sendMessageToUser(User user, Packet packet) {
+        try {
+            if (user.getOutStream() != null) {
+                user.getOutStream().writeObject(packet);
+                user.getOutStream().flush();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error sending message to user: " + user.getNickname(), e);
+        }
+    }
+
+    public void joinRoom(Packet packet) {
+        String roomName = packet.getRoom();
+        User user = packet.getUser();
+        addUserToRoom(roomName, user);
     }
 
     public void register() {
